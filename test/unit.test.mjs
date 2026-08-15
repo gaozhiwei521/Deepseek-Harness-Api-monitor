@@ -133,6 +133,46 @@ async function run() {
 		check("transport error -> ok:false transport", body.ok === false && body.error === "transport", body);
 	}
 
+	// Case F: usage route -> local aggregation (no provider call, no key needed)
+	{
+		const routes = [];
+		const ctx = {
+			get: (n) => void 0,
+			webServer: { register: (r) => { routes.push(r); return () => {}; } }
+		};
+		apply(ctx, {});
+		const handler = routes.find((r) => r.path === "/dsh-balance").handler;
+		const res = makeRes();
+		await handler(makeReq("GET", "/dsh-balance/usage"), res);
+		const body = JSON.parse(res.body);
+		check("usage ok:true (local aggregation)", body.ok === true, body);
+		check(
+			"usage returns numeric shape",
+			body.data &&
+				typeof body.data.sessions === "number" &&
+				typeof body.data.totalTokens === "number" &&
+				typeof body.data.todayTokens === "number" &&
+				typeof body.data.records === "number",
+			body.data
+		);
+	}
+
+	// Case G: unknown route -> 404
+	{
+		const routes = [];
+		const credentials = { resolve: async () => ({ value: "sk-x" }) };
+		const ctx = {
+			get: (n) => (n === "credentials" ? credentials : n === "settings" ? void 0 : void 0),
+			webServer: { register: (r) => { routes.push(r); return () => {}; } }
+		};
+		apply(ctx, {});
+		const handler = routes.find((r) => r.path === "/dsh-balance").handler;
+		const res = makeRes();
+		await handler(makeReq("GET", "/dsh-balance/nope"), res);
+		const body = JSON.parse(res.body);
+		check("unknown route -> 404 not-found", res.status === 404 && body.error === "not-found", body);
+	}
+
 	console.log(failures === 0 ? "\nALL TESTS PASSED" : `\n${failures} TEST(S) FAILED`);
 	process.exit(failures === 0 ? 0 : 1);
 }
