@@ -1,0 +1,10 @@
+# dsh-api-balance bundle patch: registers the settings-section plugin row.
+# Applied automatically when installed via `dsh plugin add` (bundle layer).
+- insert:
+    - id: api-balance
+      name: dsh-api-balance
+      inject:
+        - webServer
+      config:
+        apiKeyEnv: DEEPSEEK_API_KEY
+        baseURL: https://api.deepseek.com
